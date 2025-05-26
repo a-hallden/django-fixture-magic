@@ -56,6 +56,7 @@ def get_m2m(obj, *exclude_fields):
 
 def serialize_fully(exclude_fields):
     index = 0
+    exclude_fields = exclude_fields or ()
     fields_to_anonymize = ["first_name", "last_name", "email", "username"]
 
     while index < len(serialize_me):
