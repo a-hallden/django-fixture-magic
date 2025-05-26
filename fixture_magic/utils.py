@@ -1,7 +1,9 @@
 from django.db import models
+from factory.faker import faker
 
 serialize_me = []
 seen = {}
+f = faker.Faker()
 
 
 def reorder_json(data, models, ordering_cond=None):
@@ -54,9 +56,11 @@ def get_m2m(obj, *exclude_fields):
 
 def serialize_fully(exclude_fields):
     index = 0
-    exclude_fields = exclude_fields or ()
+    fields_to_anonymize = ["first_name", "last_name", "email", "username"]
 
     while index < len(serialize_me):
+        # generating this outside of the field loop to make sure email==username
+        email = f.email()
         for field in get_fields(serialize_me[index], *exclude_fields):
             if isinstance(field, models.ForeignKey):
                 add_to_serialize_list(
@@ -64,7 +68,14 @@ def serialize_fully(exclude_fields):
         for field in get_m2m(serialize_me[index], *exclude_fields):
             add_to_serialize_list(
                 serialize_me[index].__getattribute__(field.name).all())
-
+        for field in fields_to_anonymize:
+            if field in serialize_me[index].__dict__:
+                if field == "first_name":
+                    serialize_me[index].__setattr__(field, f.first_name())
+                elif field == "last_name":
+                    serialize_me[index].__setattr__(field, f.last_name())
+                elif field in ["email", "username"]:
+                    serialize_me[index].__setattr__(field, email)
         index += 1
 
     serialize_me.reverse()
