@@ -57,7 +57,14 @@ def get_m2m(obj, *exclude_fields):
 def serialize_fully(exclude_fields):
     index = 0
     exclude_fields = exclude_fields or ()
-    fields_to_anonymize = ["first_name", "last_name", "email", "username"]
+
+    fields_to_anonymize = [
+        ("user", "first_name"),
+        ("user", "last_name"),
+        ("user", "email"),
+        ("user", "username"),
+        ("organization", "name"),
+    ]
 
     while index < len(serialize_me):
         # generating this outside of the field loop to make sure email==username
@@ -65,18 +72,23 @@ def serialize_fully(exclude_fields):
         for field in get_fields(serialize_me[index], *exclude_fields):
             if isinstance(field, models.ForeignKey):
                 add_to_serialize_list(
-                    [serialize_me[index].__getattribute__(field.name)])
+                    [serialize_me[index].__getattribute__(field.name)]
+                )
         for field in get_m2m(serialize_me[index], *exclude_fields):
             add_to_serialize_list(
-                serialize_me[index].__getattribute__(field.name).all())
-        for field in fields_to_anonymize:
-            if field in serialize_me[index].__dict__:
+                serialize_me[index].__getattribute__(field.name).all()
+            )
+        for model, field in fields_to_anonymize:
+            obj = serialize_me[index]
+            if obj._meta.model_name == model and field in obj.__dict__:
                 if field == "first_name":
                     serialize_me[index].__setattr__(field, f.first_name())
                 elif field == "last_name":
                     serialize_me[index].__setattr__(field, f.last_name())
                 elif field in ["email", "username"]:
                     serialize_me[index].__setattr__(field, email)
+                elif field == "name":
+                    serialize_me[index].__setattr__(field, f.company())
         index += 1
 
     serialize_me.reverse()
